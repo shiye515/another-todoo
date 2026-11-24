@@ -8,30 +8,57 @@
 
 /* Begin PBXBuildFile section */
 		08927117CAD6DB842AB9617F /* TodooCardMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115114919A68ED8A5767F11B /* TodooCardMacApp.swift */; };
-		0C507FF8288279AAB0D36BAE /* DevicePlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A02D55C0CCC9B568495C836 /* DevicePlaceholderView.swift */; };
+		24EFFF8CA5E9931703177611 /* CropSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5992268E3B53B01F6884A5A3 /* CropSheetView.swift */; };
 		2DC5305A0B8224CC26367181 /* DetailPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2297B63F69E914D7F7D47C2E /* DetailPlaceholderView.swift */; };
+		575CF6DB399130A9ED519660 /* ImageProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CA6D6CC88492FCC4D4D55E9 /* ImageProcessor.swift */; };
+		5DA46FF23EABB57AAD054353 /* CropCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A5E1770F78781BBC873F0D7 /* CropCanvasView.swift */; };
+		84FB617EC68164B12DEE51CE /* TodooCardDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 766A86BD2EE9E25DEC06DF5F /* TodooCardDevice.swift */; };
+		8A8190E3CCFFEC9B1C32335A /* DeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90EBFC2E8790122AC40F65E /* DeviceView.swift */; };
 		8B60CE90FC7B0FA1D0D71C7D /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4561CE37949577869AB9D8AE /* SidebarView.swift */; };
 		A847036023BB34996E9C1451 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9E12828FFAAC39A5DCF21EE /* ContentView.swift */; };
 		B2AFF049D555F58AF095BDCD /* SidebarSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DD26358EBB26B25B59DC8B /* SidebarSection.swift */; };
-		ED3520E973093D85A3978817 /* ImagePlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A166DAB2FFBA3BFB2C8CAD /* ImagePlaceholderView.swift */; };
+		D0D953484CDC52E55681DCEA /* ImageEditConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB4332FC07A808E1C848AAC /* ImageEditConfiguration.swift */; };
+		D24044E7DCA77987C2E73798 /* DeviceScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81EBFE37A9351D7BCF0FC8B0 /* DeviceScanner.swift */; };
+		D2ABFE9AE7A73DB5AA6670E7 /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 751B0612DE03ECA85FF8B693 /* CoreBluetooth.framework */; };
+		F527D4535B7A699DFA4582E4 /* ImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A3C68B292E013A661DBF42 /* ImageView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0A5E1770F78781BBC873F0D7 /* CropCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropCanvasView.swift; sourceTree = "<group>"; };
 		115114919A68ED8A5767F11B /* TodooCardMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodooCardMacApp.swift; sourceTree = "<group>"; };
 		2297B63F69E914D7F7D47C2E /* DetailPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailPlaceholderView.swift; sourceTree = "<group>"; };
 		254220339B34497BFC520AAC /* TodooCardMacApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodooCardMacApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		3A02D55C0CCC9B568495C836 /* DevicePlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePlaceholderView.swift; sourceTree = "<group>"; };
 		4561CE37949577869AB9D8AE /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
-		72A166DAB2FFBA3BFB2C8CAD /* ImagePlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePlaceholderView.swift; sourceTree = "<group>"; };
+		5992268E3B53B01F6884A5A3 /* CropSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropSheetView.swift; sourceTree = "<group>"; };
+		60A3C68B292E013A661DBF42 /* ImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageView.swift; sourceTree = "<group>"; };
+		751B0612DE03ECA85FF8B693 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
+		766A86BD2EE9E25DEC06DF5F /* TodooCardDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodooCardDevice.swift; sourceTree = "<group>"; };
 		76DD26358EBB26B25B59DC8B /* SidebarSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSection.swift; sourceTree = "<group>"; };
+		7CA6D6CC88492FCC4D4D55E9 /* ImageProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProcessor.swift; sourceTree = "<group>"; };
+		81EBFE37A9351D7BCF0FC8B0 /* DeviceScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceScanner.swift; sourceTree = "<group>"; };
+		A90EBFC2E8790122AC40F65E /* DeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceView.swift; sourceTree = "<group>"; };
 		A9E12828FFAAC39A5DCF21EE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		FEB4332FC07A808E1C848AAC /* ImageEditConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditConfiguration.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A18D00FBCF4552CE7BBD14F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D2ABFE9AE7A73DB5AA6670E7 /* CoreBluetooth.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		03C80EB9F0BEC9BBE7C4C8DF /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				FEB4332FC07A808E1C848AAC /* ImageEditConfiguration.swift */,
 				76DD26358EBB26B25B59DC8B /* SidebarSection.swift */,
+				766A86BD2EE9E25DEC06DF5F /* TodooCardDevice.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -56,9 +83,11 @@
 			isa = PBXGroup;
 			children = (
 				A9E12828FFAAC39A5DCF21EE /* ContentView.swift */,
+				0A5E1770F78781BBC873F0D7 /* CropCanvasView.swift */,
+				5992268E3B53B01F6884A5A3 /* CropSheetView.swift */,
 				2297B63F69E914D7F7D47C2E /* DetailPlaceholderView.swift */,
-				3A02D55C0CCC9B568495C836 /* DevicePlaceholderView.swift */,
-				72A166DAB2FFBA3BFB2C8CAD /* ImagePlaceholderView.swift */,
+				A90EBFC2E8790122AC40F65E /* DeviceView.swift */,
+				60A3C68B292E013A661DBF42 /* ImageView.swift */,
 				4561CE37949577869AB9D8AE /* SidebarView.swift */,
 			);
 			path = Views;
@@ -69,9 +98,28 @@
 			children = (
 				15C901F6293E68AF38C4129C /* App */,
 				03C80EB9F0BEC9BBE7C4C8DF /* Models */,
+				76F987CEE1C5A4F8888D6876 /* Services */,
 				1922A217C604CC37DF4F61A8 /* Views */,
+				E98142ED139FB79EB108BAFA /* Frameworks */,
 				0A5779494F35249F354B540F /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		76F987CEE1C5A4F8888D6876 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				81EBFE37A9351D7BCF0FC8B0 /* DeviceScanner.swift */,
+				7CA6D6CC88492FCC4D4D55E9 /* ImageProcessor.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		E98142ED139FB79EB108BAFA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				751B0612DE03ECA85FF8B693 /* CoreBluetooth.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -82,6 +130,7 @@
 			buildConfigurationList = ACEAE5384ABC79A56C8B8091 /* Build configuration list for PBXNativeTarget "TodooCardMacApp" */;
 			buildPhases = (
 				777EA8CEB8875ECDC8853161 /* Sources */,
+				A18D00FBCF4552CE7BBD14F0 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -133,11 +182,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				A847036023BB34996E9C1451 /* ContentView.swift in Sources */,
+				5DA46FF23EABB57AAD054353 /* CropCanvasView.swift in Sources */,
+				24EFFF8CA5E9931703177611 /* CropSheetView.swift in Sources */,
 				2DC5305A0B8224CC26367181 /* DetailPlaceholderView.swift in Sources */,
-				0C507FF8288279AAB0D36BAE /* DevicePlaceholderView.swift in Sources */,
-				ED3520E973093D85A3978817 /* ImagePlaceholderView.swift in Sources */,
+				D24044E7DCA77987C2E73798 /* DeviceScanner.swift in Sources */,
+				8A8190E3CCFFEC9B1C32335A /* DeviceView.swift in Sources */,
+				D0D953484CDC52E55681DCEA /* ImageEditConfiguration.swift in Sources */,
+				575CF6DB399130A9ED519660 /* ImageProcessor.swift in Sources */,
+				F527D4535B7A699DFA4582E4 /* ImageView.swift in Sources */,
 				B2AFF049D555F58AF095BDCD /* SidebarSection.swift in Sources */,
 				8B60CE90FC7B0FA1D0D71C7D /* SidebarView.swift in Sources */,
+				84FB617EC68164B12DEE51CE /* TodooCardDevice.swift in Sources */,
 				08927117CAD6DB842AB9617F /* TodooCardMacApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

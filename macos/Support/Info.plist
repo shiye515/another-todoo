@@ -22,5 +22,7 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>用于扫描 TodooCard 设备，并读取设备广播信息。</string>
 </dict>
 </plist>

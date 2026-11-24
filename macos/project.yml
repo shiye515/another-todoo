@@ -21,6 +21,9 @@ targets:
       - path: App
       - path: Views
       - path: Models
+      - path: Services
+    dependencies:
+      - sdk: CoreBluetooth.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.todoo.TodooCardMacApp
