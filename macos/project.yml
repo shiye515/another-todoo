@@ -1,0 +1,31 @@
+name: TodooCardMacApp
+options:
+  bundleIdPrefix: com.todoo
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    PRODUCT_NAME: TodooCardMacApp
+    MARKETING_VERSION: 1.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: "5.10"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+
+targets:
+  TodooCardMacApp:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+      - path: Views
+      - path: Models
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.todoo.TodooCardMacApp
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Support/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_EMIT_LOC_STRINGS: YES

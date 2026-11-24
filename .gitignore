@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+
+# Xcode
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+*.xcuserstate
+
+# Local build outputs in this repository
+macos/.derived/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# TodooCard generated payload artifacts
+raw/*.todoocard.bin
+raw/*.todoocard.controller.bin
+raw/*.todoocard.protocol.qlz
+raw/*.todoocard.protocol.legacy.qlz

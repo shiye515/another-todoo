@@ -1,0 +1,4 @@
+interface:
+  display_name: "TodooCard Skills"
+  short_description: "Pair, diagnose, and reliably send photos to current TodooCard firmware."
+  default_prompt: "Use $todoocard-skills to securely pair or probe my TodooCard, prepare and verify the image, then use the firmware-aware transfer flow after I confirm the exact device."

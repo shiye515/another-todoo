@@ -1,0 +1,333 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		08927117CAD6DB842AB9617F /* TodooCardMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115114919A68ED8A5767F11B /* TodooCardMacApp.swift */; };
+		0C507FF8288279AAB0D36BAE /* DevicePlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A02D55C0CCC9B568495C836 /* DevicePlaceholderView.swift */; };
+		2DC5305A0B8224CC26367181 /* DetailPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2297B63F69E914D7F7D47C2E /* DetailPlaceholderView.swift */; };
+		8B60CE90FC7B0FA1D0D71C7D /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4561CE37949577869AB9D8AE /* SidebarView.swift */; };
+		A847036023BB34996E9C1451 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9E12828FFAAC39A5DCF21EE /* ContentView.swift */; };
+		B2AFF049D555F58AF095BDCD /* SidebarSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DD26358EBB26B25B59DC8B /* SidebarSection.swift */; };
+		ED3520E973093D85A3978817 /* ImagePlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A166DAB2FFBA3BFB2C8CAD /* ImagePlaceholderView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		115114919A68ED8A5767F11B /* TodooCardMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodooCardMacApp.swift; sourceTree = "<group>"; };
+		2297B63F69E914D7F7D47C2E /* DetailPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailPlaceholderView.swift; sourceTree = "<group>"; };
+		254220339B34497BFC520AAC /* TodooCardMacApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodooCardMacApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3A02D55C0CCC9B568495C836 /* DevicePlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePlaceholderView.swift; sourceTree = "<group>"; };
+		4561CE37949577869AB9D8AE /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		72A166DAB2FFBA3BFB2C8CAD /* ImagePlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePlaceholderView.swift; sourceTree = "<group>"; };
+		76DD26358EBB26B25B59DC8B /* SidebarSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSection.swift; sourceTree = "<group>"; };
+		A9E12828FFAAC39A5DCF21EE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		03C80EB9F0BEC9BBE7C4C8DF /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				76DD26358EBB26B25B59DC8B /* SidebarSection.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		0A5779494F35249F354B540F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				254220339B34497BFC520AAC /* TodooCardMacApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		15C901F6293E68AF38C4129C /* App */ = {
+			isa = PBXGroup;
+			children = (
+				115114919A68ED8A5767F11B /* TodooCardMacApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		1922A217C604CC37DF4F61A8 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A9E12828FFAAC39A5DCF21EE /* ContentView.swift */,
+				2297B63F69E914D7F7D47C2E /* DetailPlaceholderView.swift */,
+				3A02D55C0CCC9B568495C836 /* DevicePlaceholderView.swift */,
+				72A166DAB2FFBA3BFB2C8CAD /* ImagePlaceholderView.swift */,
+				4561CE37949577869AB9D8AE /* SidebarView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		500B22876B9836FD5071756F = {
+			isa = PBXGroup;
+			children = (
+				15C901F6293E68AF38C4129C /* App */,
+				03C80EB9F0BEC9BBE7C4C8DF /* Models */,
+				1922A217C604CC37DF4F61A8 /* Views */,
+				0A5779494F35249F354B540F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		70FCD5D1E92AF676C6C02D30 /* TodooCardMacApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ACEAE5384ABC79A56C8B8091 /* Build configuration list for PBXNativeTarget "TodooCardMacApp" */;
+			buildPhases = (
+				777EA8CEB8875ECDC8853161 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TodooCardMacApp;
+			packageProductDependencies = (
+			);
+			productName = TodooCardMacApp;
+			productReference = 254220339B34497BFC520AAC /* TodooCardMacApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6FA0CC3E787BA213C14A9373 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					70FCD5D1E92AF676C6C02D30 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = AF0F5D289CB996D1CA4FD555 /* Build configuration list for PBXProject "TodooCardMacApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 500B22876B9836FD5071756F;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0A5779494F35249F354B540F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				70FCD5D1E92AF676C6C02D30 /* TodooCardMacApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		777EA8CEB8875ECDC8853161 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A847036023BB34996E9C1451 /* ContentView.swift in Sources */,
+				2DC5305A0B8224CC26367181 /* DetailPlaceholderView.swift in Sources */,
+				0C507FF8288279AAB0D36BAE /* DevicePlaceholderView.swift in Sources */,
+				ED3520E973093D85A3978817 /* ImagePlaceholderView.swift in Sources */,
+				B2AFF049D555F58AF095BDCD /* SidebarSection.swift in Sources */,
+				8B60CE90FC7B0FA1D0D71C7D /* SidebarView.swift in Sources */,
+				08927117CAD6DB842AB9617F /* TodooCardMacApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4D59AD72CE24FF8E7EAF38DE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Support/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.todoo.TodooCardMacApp;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+		5E0754B668B5D6FD8FB2FE3E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Support/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.todoo.TodooCardMacApp;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		7DA37920D0384CF5D3D75AC1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = TodooCardMacApp;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		90494898E1093A1CC76859A4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = TodooCardMacApp;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		ACEAE5384ABC79A56C8B8091 /* Build configuration list for PBXNativeTarget "TodooCardMacApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E0754B668B5D6FD8FB2FE3E /* Debug */,
+				4D59AD72CE24FF8E7EAF38DE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AF0F5D289CB996D1CA4FD555 /* Build configuration list for PBXProject "TodooCardMacApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7DA37920D0384CF5D3D75AC1 /* Debug */,
+				90494898E1093A1CC76859A4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 6FA0CC3E787BA213C14A9373 /* Project object */;
+}
