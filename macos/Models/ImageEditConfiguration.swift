@@ -1,14 +1,8 @@
 import CoreGraphics
 import Foundation
 
-enum ImageProcessStep: Equatable {
-    case selection
-    case cropping
-    case quantization
-}
-
 /// 图像编辑参数（纯值类型，可在任意线程传递）。
-struct ImageEditConfiguration: Equatable, Sendable {
+struct ImageEditConfiguration: Equatable, Codable, Sendable {
     var targetWidth: Int
     var targetHeight: Int
     var rotationDegrees: Int
@@ -30,7 +24,7 @@ struct ImageEditConfiguration: Equatable, Sendable {
     )
 }
 
-enum CropMode: String, CaseIterable, Identifiable {
+enum CropMode: String, Codable, CaseIterable, Identifiable {
     case target = "按目标比例"
     case square = "正方形"
     case fourThree = "4:3"

@@ -2,179 +2,161 @@ import AppKit
 import CoreGraphics
 import Foundation
 import ImageIO
+import os
 
+/// 管理添加图片的裁剪队列与 payload 编码。
+///
+/// 图片页为纯列表布局：图片经“添加 → 裁剪确认”入库（仅存 528×792 成品，
+/// 原图不保留），发送由列表条目的持久化量化图编码 payload。
 @MainActor
 final class ImageProcessor: ObservableObject {
+    /// 裁剪画布的编辑配置（缩放/偏移/旋转），随裁剪确认一并入库。
     @Published var configuration = ImageEditConfiguration.todooCard528x792
-    @Published private(set) var sourceURL: URL?
-    @Published private(set) var sourceSize: CGSize?
+    /// 裁剪画布显示的原图预览（仅添加队列期间驻留内存，不入库）。
     @Published private(set) var originalPreview: NSImage?
-    @Published private(set) var quantizedPreview: NSImage?
-    @Published private(set) var floydSteinbergPreview: NSImage?
-    @Published private(set) var processedImage: NSImage?
+    /// 裁剪窗口是否可见（添加队列中有待裁剪图片）。
+    @Published private(set) var isCropping = false
+    /// 当前批次的渲染/入库在后台进行中。
+    @Published private(set) var isProcessingAdd = false
     @Published private(set) var errorMessage: String?
-    @Published private(set) var currentStep: ImageProcessStep = .selection
 
-    /// 量化预览的派发代次：连续触发（旋转/重置）时仅应用最新一次结果。
-    private var previewGeneration = 0
+    private let logger = Logger(subsystem: "com.todoo.TodooCardMacApp", category: "processor")
+    /// 待裁剪的图片文件队列。
+    private var pendingAddURLs: [URL] = []
+    private var stagedSource: CGImage?
+    private var stagedDisplayName = ""
+    private weak var library: ImageLibrary?
 
-    private var sourceImage: CGImage?
-
-    func openImageSelection() {
-        currentStep = .selection
-        chooseImage()
+    /// DetailPlaceholderView 装配时注入库服务。
+    func attach(library: ImageLibrary) {
+        self.library = library
     }
 
-    func chooseImage() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.allowedContentTypes = [.jpeg, .png, .heic, .tiff]
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        loadImage(from: url)
+    func setErrorMessage(_ message: String) {
+        errorMessage = message
     }
 
-    func loadImage(from url: URL) {
-        do {
-            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-                  let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-                throw ImageProcessorError.invalidImage
+    // MARK: - 添加队列
+
+    /// 开始一批添加：多选的图片 URL 依次进入裁剪窗口。
+    func beginAdd(urls: [URL]) {
+        guard library != nil else { return }
+        guard pendingAddURLs.isEmpty, !isCropping, !isProcessingAdd else {
+            setErrorMessage("上一批图片还在处理中，请稍候再添加。")
+            return
+        }
+        guard !urls.isEmpty else { return }
+        pendingAddURLs = urls
+        advanceAddQueue()
+    }
+
+    /// 取出下一张待裁剪图片；无法读取的跳过并继续，队列空则结束。
+    private func advanceAddQueue() {
+        while !pendingAddURLs.isEmpty {
+            let url = pendingAddURLs.removeFirst()
+            do {
+                guard let source = try Self.decodeImage(at: url) else {
+                    throw ImageProcessorError.invalidImage
+                }
+                stagedSource = source
+                stagedDisplayName = url.deletingPathExtension().lastPathComponent
+                configuration = .todooCard528x792
+                originalPreview = NSImage(cgImage: source, size: .zero)
+                isCropping = true
+                return
+            } catch {
+                logger.error("跳过无法读取的图片：\(url.lastPathComponent, privacy: .public)")
+                setErrorMessage("无法读取图片 \(url.lastPathComponent)，已跳过")
             }
+        }
+        isCropping = false
+    }
 
-            sourceURL = url
-            sourceImage = image
-            sourceSize = CGSize(width: image.width, height: image.height)
-            originalPreview = NSImage(cgImage: image, size: .zero)
-            errorMessage = nil
-            quantizedPreview = nil
-            floydSteinbergPreview = nil
-            processedImage = nil
-            currentStep = .cropping
-        } catch {
-            errorMessage = error.localizedDescription
+    /// 确认裁剪：渲染 528×792 成品并入库，随后继续队列下一张。
+    func confirmCrop() {
+        guard isCropping, let source = stagedSource, let library else { return }
+        let config = configuration
+        let name = stagedDisplayName
+        isCropping = false
+        isProcessingAdd = true
+        Task { [weak self] in
+            await self?.processStagedAdd(
+                source: source,
+                configuration: config,
+                displayName: name,
+                library: library
+            )
         }
     }
 
-    func confirmCrop() {
-        guard sourceImage != nil else { return }
-        currentStep = .quantization
-        refreshPreview()
+    private func processStagedAdd(
+        source: CGImage,
+        configuration config: ImageEditConfiguration,
+        displayName name: String,
+        library: ImageLibrary
+    ) async {
+        defer { isProcessingAdd = false }
+        do {
+            let processed = try render(source, configuration: config)
+            _ = try await library.add(
+                displayName: name,
+                processedCGImage: processed,
+                configuration: config
+            )
+            logger.info("已入库：\(name, privacy: .public)")
+        } catch {
+            logger.error("入库失败：\(error.localizedDescription, privacy: .public)")
+            setErrorMessage("入库失败：\(error.localizedDescription)")
+        }
+        advanceAddQueue()
     }
+
+    /// 取消当前裁剪：该图片不入库，队列继续下一张。
+    func cancelCrop() {
+        guard isCropping else { return }
+        logger.info("取消裁剪，跳过当前图片")
+        stagedSource = nil
+        stagedDisplayName = ""
+        originalPreview = nil
+        isCropping = false
+        advanceAddQueue()
+    }
+
+    // MARK: - 裁剪编辑
 
     func updateCropConfiguration(_ configuration: ImageEditConfiguration) {
         self.configuration = configuration
     }
 
-    func refreshPreview() {
-        guard let sourceImage else { return }
-        guard currentStep == .quantization else { return }
-
-        do {
-            let finalImage = try render(sourceImage)
-            processedImage = NSImage(cgImage: finalImage, size: NSSize(
-                width: finalImage.width,
-                height: finalImage.height
-            ))
-
-            // 量化是逐像素重计算，放到后台线程避免阻塞主线程。
-            let dithering = configuration.ditheringEnabled
-            previewGeneration += 1
-            let generation = previewGeneration
-            Task.detached(priority: .userInitiated) { [weak self] in
-                async let quantized = Self.computeQuantized(finalImage, dithering: false)
-                async let floydSteinberg = Self.computeQuantized(finalImage, dithering: dithering)
-                do {
-                    let images = try await (quantized, floydSteinberg)
-                    await self?.applyQuantizedPreviews(images.0, floydSteinberg: images.1, generation: generation)
-                } catch {
-                    await self?.applyQuantizedError(error, generation: generation)
-                }
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    /// 量化结果派发代次校验：仅应用最新请求，防止旧结果覆盖新配置。
-    private func applyQuantizedPreviews(
-        _ quantized: CGImage,
-        floydSteinberg: CGImage,
-        generation: Int
-    ) {
-        guard previewGeneration == generation, currentStep == .quantization else { return }
-        quantizedPreview = NSImage(cgImage: quantized, size: NSSize(
-            width: quantized.width,
-            height: quantized.height
-        ))
-        floydSteinbergPreview = NSImage(cgImage: floydSteinberg, size: NSSize(
-            width: floydSteinberg.width,
-            height: floydSteinberg.height
-        ))
-        errorMessage = nil
-    }
-
-    private func applyQuantizedError(_ error: Error, generation: Int) {
-        guard previewGeneration == generation else { return }
-        errorMessage = error.localizedDescription
-    }
-
     func rotateRight() {
         configuration.rotationDegrees = (configuration.rotationDegrees + 90) % 360
-        refreshOriginalPreviewForCrop()
-        if currentStep == .quantization {
-            refreshPreview()
-        }
+        refreshStagedPreview()
     }
 
     func rotateLeft() {
         configuration.rotationDegrees = (configuration.rotationDegrees + 270) % 360
-        refreshOriginalPreviewForCrop()
-        if currentStep == .quantization {
-            refreshPreview()
-        }
+        refreshStagedPreview()
     }
 
-    func refreshOriginalPreviewForCrop() {
-        guard let sourceImage else { return }
+    private func refreshStagedPreview() {
+        guard let source = stagedSource else { return }
         do {
-            let rotated = try rotate(sourceImage, degrees: configuration.rotationDegrees)
+            let rotated = try rotate(source, degrees: configuration.rotationDegrees)
             originalPreview = NSImage(cgImage: rotated, size: NSSize(
                 width: rotated.width,
                 height: rotated.height
             ))
         } catch {
-            errorMessage = error.localizedDescription
+            setErrorMessage(error.localizedDescription)
         }
     }
 
-    func resetEdits() {
-        configuration = .todooCard528x792
-        quantizedPreview = nil
-        floydSteinbergPreview = nil
-        processedImage = nil
-        if currentStep == .quantization {
-            refreshPreview()
+    private static func decodeImage(at url: URL) throws -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            return nil
         }
-    }
-
-    func cancelCrop() {
-        configuration = .todooCard528x792
-        quantizedPreview = nil
-        floydSteinbergPreview = nil
-        processedImage = nil
-        currentStep = .selection
-    }
-
-    func saveProcessedImage(to url: URL) throws {
-        guard let processedImage,
-              let tiffData = processedImage.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData),
-              let pngData = bitmap.representation(using: .png, properties: [:]) else {
-            throw ImageProcessorError.renderFailed
-        }
-        try pngData.write(to: url)
+        return image
     }
 
     func makeControllerPayload(for image: NSImage) async throws -> Data {
@@ -300,11 +282,7 @@ final class ImageProcessor: ObservableObject {
         return Data(controller)
     }
 
-    func setErrorMessage(_ message: String) {
-        errorMessage = message
-    }
-
-    private func render(_ source: CGImage) throws -> CGImage {
+    private func render(_ source: CGImage, configuration: ImageEditConfiguration) throws -> CGImage {
         guard configuration.targetWidth > 0, configuration.targetHeight > 0 else {
             throw ImageProcessorError.invalidTargetSize
         }
@@ -442,7 +420,7 @@ final class ImageProcessor: ObservableObject {
     }
 
     /// 六色量化（可选 Floyd–Steinberg 抖动）。纯像素计算，可在任意线程执行。
-    nonisolated private static func computeQuantized(_ image: CGImage, dithering: Bool) throws -> CGImage {
+    nonisolated static func computeQuantized(_ image: CGImage, dithering: Bool) throws -> CGImage {
         let width = image.width
         let height = image.height
 

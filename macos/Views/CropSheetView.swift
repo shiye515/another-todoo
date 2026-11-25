@@ -3,8 +3,6 @@ import SwiftUI
 struct CropSheetView: View {
     @ObservedObject var processor: ImageProcessor
     @Binding var isInteracting: Bool
-    let onConfirm: () -> Void
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -25,6 +23,9 @@ struct CropSheetView: View {
                             .fontWeight(.semibold)
                         Text("固定取景比例：2:3")
                             .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("确认裁剪后图片将入库；取消将跳过该图片（不保留原图）。")
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
 
@@ -58,13 +59,12 @@ struct CropSheetView: View {
                         Spacer()
                         Button("取消") {
                             processor.cancelCrop()
-                            dismiss()
                         }
                         Button("确认裁剪") {
-                            onConfirm()
-                            dismiss()
+                            processor.confirmCrop()
                         }
                         .buttonStyle(.borderedProminent)
+                        .disabled(processor.isProcessingAdd)
                     }
                 }
                 .frame(width: 188, height: 448, alignment: .topLeading)
