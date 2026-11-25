@@ -7,7 +7,8 @@ enum ImageProcessStep: Equatable {
     case quantization
 }
 
-struct ImageEditConfiguration: Equatable {
+/// 图像编辑参数（纯值类型，可在任意线程传递）。
+struct ImageEditConfiguration: Equatable, Sendable {
     var targetWidth: Int
     var targetHeight: Int
     var rotationDegrees: Int
@@ -17,7 +18,7 @@ struct ImageEditConfiguration: Equatable {
     var verticalOffset: Double
     var ditheringEnabled: Bool
 
-    static let todocCard528x792 = ImageEditConfiguration(
+    static let todooCard528x792 = ImageEditConfiguration(
         targetWidth: 528,
         targetHeight: 792,
         rotationDegrees: 0,

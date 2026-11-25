@@ -4,19 +4,27 @@ import UniformTypeIdentifiers
 struct ImageView: View {
     @ObservedObject var processor: ImageProcessor
     @ObservedObject var transferService: TodooCardTransferService
+    @AppStorage("defaultTodooCardDeviceID") private var defaultDeviceID = ""
     @State private var showingCropSheet = false
     @State private var isCropCanvasInteracting = false
+    @State private var pendingTransfer: PendingTransfer?
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                // 错误横幅在所有步骤可见：发送相关的错误发生在量化步骤。
+                errorView
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
                 if processor.currentStep == .quantization {
-                    QuantizationView(processor: processor)
-                        .padding(.zero)
+                    QuantizationView(
+                        processor: processor,
+                        onSendImage: { sendPreview($0) }
+                    )
                 } else {
-                    errorView
                     stepContent
-                        .padding(24)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 24)
                 }
             }
         }
@@ -28,6 +36,16 @@ struct ImageView: View {
                 } label: {
                     Label("选择图片", systemImage: "photo.badge.plus")
                 }
+                .keyboardShortcut("o", modifiers: .command)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    saveImage()
+                } label: {
+                    Label("导出 PNG", systemImage: "square.and.arrow.down")
+                }
+                .keyboardShortcut("s", modifiers: .command)
+                .disabled(processor.processedImage == nil)
             }
         }
         .onChange(of: processor.currentStep) { step in
@@ -41,6 +59,13 @@ struct ImageView: View {
                     showingCropSheet = false
                     processor.confirmCrop()
                 }
+            )
+        }
+        .sheet(item: $pendingTransfer) { transfer in
+            TransferProgressSheet(
+                transferService: transferService,
+                controllerPayload: transfer.payload,
+                deviceID: transfer.deviceID
             )
         }
     }
@@ -69,8 +94,25 @@ struct ImageView: View {
         case .quantization:
             QuantizationView(
                 processor: processor,
-                transferService: transferService
+                onSendImage: { sendPreview($0) }
             )
+        }
+    }
+
+    /// 校验默认设备并编码 payload，然后弹出发送进度窗口。
+    private func sendPreview(_ image: NSImage) {
+        guard pendingTransfer == nil else { return }
+        guard let deviceID = UUID(uuidString: defaultDeviceID) else {
+            processor.setErrorMessage("默认设备 ID 无效，请到“设备”页重新设置默认设备。")
+            return
+        }
+        Task {
+            do {
+                let payload = try await processor.makeControllerPayload(for: image)
+                pendingTransfer = PendingTransfer(payload: payload, deviceID: deviceID)
+            } catch {
+                processor.setErrorMessage(error.localizedDescription)
+            }
         }
     }
 
@@ -89,6 +131,13 @@ struct ImageView: View {
             processor.setErrorMessage(error.localizedDescription)
         }
     }
+}
+
+/// 待发送到设备的一次传输任务（驱动 `.sheet(item:)` 呈现进度弹窗）。
+private struct PendingTransfer: Identifiable {
+    let id = UUID()
+    let payload: Data
+    let deviceID: UUID
 }
 
 private struct PlaceholderCard<Content: View>: View {
@@ -112,7 +161,7 @@ private struct PlaceholderCard<Content: View>: View {
 
 private struct QuantizationView: View {
     @ObservedObject var processor: ImageProcessor
-    @ObservedObject var transferService: TodooCardTransferService
+    let onSendImage: (NSImage) -> Void
     @AppStorage("defaultTodooCardDeviceID") private var defaultDeviceID = ""
 
     var body: some View {
@@ -123,14 +172,18 @@ private struct QuantizationView: View {
                 image: processor.quantizedPreview,
                 sendEnabled: true
             ) {
-                sendQuantizedImage()
+                if let image = processor.quantizedPreview {
+                    onSendImage(image)
+                }
             }
             previewCard(
                 title: "Floyd-Steinberg 算法处理图",
                 image: processor.floydSteinbergPreview,
                 sendEnabled: true
             ) {
-                sendFloydSteinbergImage()
+                if let image = processor.floydSteinbergPreview {
+                    onSendImage(image)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

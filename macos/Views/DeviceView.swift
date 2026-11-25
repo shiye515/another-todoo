@@ -32,8 +32,8 @@ struct DeviceView: View {
                         Label("扫描设备", systemImage: "dot.radiowaves.left.and.right")
                     }
                 }
-                .disabled(scanner.bluetoothStateDescription != "蓝牙已就绪" &&
-                          scanner.bluetoothStateDescription != "正在初始化蓝牙")
+                .disabled(scanner.bluetoothState != .ready &&
+                          scanner.bluetoothState != .initializing)
             }
 
             if let scanError = scanner.scanError {
@@ -95,6 +95,9 @@ struct DeviceView: View {
             if !scanner.isScanning {
                 scanner.startScan()
             }
+        }
+        .onDisappear {
+            scanner.stopScan()
         }
     }
 

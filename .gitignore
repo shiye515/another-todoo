@@ -12,8 +12,8 @@ DerivedData/
 *.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 *.xcuserstate
 
-# Local build outputs in this repository
-macos/.derived/
+# Local build outputs in this repository (build + test derived data)
+macos/.derived*/
 
 # Python
 __pycache__/

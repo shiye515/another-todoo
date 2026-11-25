@@ -22,8 +22,10 @@ targets:
       - path: Views
       - path: Models
       - path: Services
-    dependencies:
-      - sdk: CoreBluetooth.framework
+    scheme:
+      testTargets:
+        - TodooCardMacAppTests
+      gatherCoverageData: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.todoo.TodooCardMacApp
@@ -32,3 +34,18 @@ targets:
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: YES
         SWIFT_EMIT_LOC_STRINGS: YES
+
+  TodooCardMacAppTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: TodooCardMacApp
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        # 顶层 settings 把 PRODUCT_NAME 统一设成了应用名，这里覆盖回 target 名，
+        # 避免 tests 的 swiftmodule 与应用 target 输出路径冲突。
+        PRODUCT_NAME: TodooCardMacAppTests
+        PRODUCT_MODULE_NAME: TodooCardMacAppTests

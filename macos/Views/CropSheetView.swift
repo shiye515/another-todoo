@@ -124,6 +124,20 @@ private struct CustomZoomSlider: View {
                         value = min(range.upperBound, max(range.lowerBound, next))
                     }
             )
+            // 无障碍：VoiceOver 以可调节元素呈现，支持递增/递减操作。
+            .accessibilityElement()
+            .accessibilityLabel("缩放")
+            .accessibilityValue("\(Int((value - range.lowerBound) / (range.upperBound - range.lowerBound) * 100))%")
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment:
+                    value = min(range.upperBound, value + step)
+                case .decrement:
+                    value = max(range.lowerBound, value - step)
+                @unknown default:
+                    break
+                }
+            }
         }
         .frame(height: 18)
     }

@@ -1,13 +1,43 @@
 import CoreBluetooth
 import Foundation
+import os
 
 @MainActor
 final class DeviceScanner: NSObject, ObservableObject {
-    @Published private(set) var bluetoothStateDescription = "初始化蓝牙"
+    /// 蓝牙状态枚举：UI 逻辑以此驱动，`description` 仅作展示。
+    enum BluetoothState: Equatable {
+        case initializing
+        case resetting
+        case unsupported
+        case unauthorized
+        case poweredOff
+        case ready
+
+        var description: String {
+            switch self {
+            case .initializing:
+                return "正在初始化蓝牙"
+            case .resetting:
+                return "蓝牙正在重置"
+            case .unsupported:
+                return "此 Mac 不支持蓝牙"
+            case .unauthorized:
+                return "没有蓝牙权限，请在系统设置中授权"
+            case .poweredOff:
+                return "蓝牙已关闭，请先开启蓝牙"
+            case .ready:
+                return "蓝牙已就绪"
+            }
+        }
+    }
+
+    @Published private(set) var bluetoothState: BluetoothState = .initializing
+    var bluetoothStateDescription: String { bluetoothState.description }
     @Published private(set) var devices: [TodooCardDevice] = []
     @Published private(set) var isScanning = false
     @Published private(set) var scanError: String?
 
+    private let logger = Logger(subsystem: "com.todoo.TodooCardMacApp", category: "scanner")
     private var centralManager: CBCentralManager!
     private var scanTimer: Timer?
     private var startScanWhenReady = false
@@ -30,10 +60,8 @@ final class DeviceScanner: NSObject, ObservableObject {
         startScanWhenReady = false
         devices = []
         isScanning = true
-        centralManager.scanForPeripherals(
-            withServices: nil,
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
-        )
+        logger.info("开始扫描附近 BLE 设备")
+        centralManager.scanForPeripherals(withServices: nil, options: nil)
         scanTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.stopScan()
@@ -50,45 +78,11 @@ final class DeviceScanner: NSObject, ObservableObject {
         }
         isScanning = false
     }
-
-    private func parseAdvertisement(_ data: Data?) -> (
-        manufacturerID: UInt16?,
-        screenType: UInt16?,
-        firmwareVersion: UInt8?,
-        capabilityFlags: UInt8?
-    ) {
-        guard let data, data.count >= 7 else {
-            return (nil, nil, nil, nil)
-        }
-        let manufacturerID = UInt16(data[0]) | (UInt16(data[1]) << 8)
-        let screenType = UInt16(data[2]) | (UInt16(data[6]) << 8)
-        return (
-            manufacturerID,
-            screenType,
-            data[4],
-            data[3]
-        )
-    }
 }
 
-extension DeviceScanner: CBCentralManagerDelegate {
+extension DeviceScanner: @preconcurrency CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        switch central.state {
-        case .unknown:
-            bluetoothStateDescription = "正在初始化蓝牙"
-        case .resetting:
-            bluetoothStateDescription = "蓝牙正在重置"
-        case .unsupported:
-            bluetoothStateDescription = "此 Mac 不支持蓝牙"
-        case .unauthorized:
-            bluetoothStateDescription = "没有蓝牙权限，请在系统设置中授权"
-        case .poweredOff:
-            bluetoothStateDescription = "蓝牙已关闭，请先开启蓝牙"
-        case .poweredOn:
-            bluetoothStateDescription = "蓝牙已就绪"
-        @unknown default:
-            bluetoothStateDescription = "蓝牙状态未知"
-        }
+        bluetoothState = Self.bluetoothState(for: central.state)
 
         if central.state != .poweredOn, isScanning {
             stopScan()
@@ -100,44 +94,51 @@ extension DeviceScanner: CBCentralManagerDelegate {
         }
     }
 
+    private static func bluetoothState(for raw: CBManagerState) -> BluetoothState {
+        switch raw {
+        case .unknown:
+            return .initializing
+        case .resetting:
+            return .resetting
+        case .unsupported:
+            return .unsupported
+        case .unauthorized:
+            return .unauthorized
+        case .poweredOff:
+            return .poweredOff
+        case .poweredOn:
+            return .ready
+        @unknown default:
+            return .initializing
+        }
+    }
+
     func centralManager(
         _ central: CBCentralManager,
         didDiscover peripheral: CBPeripheral,
         advertisementData: [String: Any],
         rssi RSSI: NSNumber
     ) {
-        let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data
-        let parsed = parseAdvertisement(manufacturerData)
-        let isTodooCard = parsed.manufacturerID == 0x5053 &&
-            parsed.screenType == 0x134C
+        guard let advertisement = TodooCardAdvertisement(
+            data: advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data
+        ), advertisement.isTodooCard else { return }
 
-        guard isTodooCard else { return }
-
-        let capabilityFlags = parsed.capabilityFlags
-        let firmwareVersion = parsed.firmwareVersion
-        let isSecure = parsed.screenType == 0x134C &&
-            (firmwareVersion ?? 0) >= 0x8C &&
-            ((capabilityFlags ?? 0) & 0x01) != 0
-        let pairingWindowOpen = isSecure &&
-            ((capabilityFlags ?? 0) & 0x02) != 0
-        let otaRecoveryMode = ((capabilityFlags ?? 0) & 0x08) != 0
-        let turboLink = ((capabilityFlags ?? 0) & 0x10) != 0
         let localName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
         let name = localName ?? peripheral.name ?? ""
 
         let device = TodooCardDevice(
             id: peripheral.identifier,
             name: name,
-            manufacturerID: parsed.manufacturerID,
-            screenType: parsed.screenType,
-            firmwareVersion: firmwareVersion,
-            capabilityFlags: capabilityFlags,
+            manufacturerID: advertisement.manufacturerID,
+            screenType: advertisement.screenType,
+            firmwareVersion: advertisement.firmwareVersion,
+            capabilityFlags: advertisement.capabilityFlags,
             rssi: RSSI.intValue,
-            isTodooCard: isTodooCard,
-            isSecure: isSecure,
-            pairingWindowOpen: pairingWindowOpen,
-            otaRecoveryMode: otaRecoveryMode,
-            turboLink: turboLink,
+            isTodooCard: true,
+            isSecure: advertisement.requiresEncryptedGatt,
+            pairingWindowOpen: advertisement.pairingWindowOpen,
+            otaRecoveryMode: advertisement.otaRecoveryMode,
+            turboLink: advertisement.turboLink,
             lastSeenAt: Date()
         )
 
@@ -147,5 +148,8 @@ extension DeviceScanner: CBCentralManagerDelegate {
             devices.append(device)
         }
         devices.sort { $0.rssi > $1.rssi }
+        logger.info(
+            "发现 TodooCard：\(name.isEmpty ? peripheral.identifier.uuidString : name, privacy: .public) rssi=\(RSSI.intValue) 固件=v\(advertisement.firmwareVersion)"
+        )
     }
 }

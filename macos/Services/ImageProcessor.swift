@@ -5,7 +5,7 @@ import ImageIO
 
 @MainActor
 final class ImageProcessor: ObservableObject {
-    @Published var configuration = ImageEditConfiguration.todocCard528x792
+    @Published var configuration = ImageEditConfiguration.todooCard528x792
     @Published private(set) var sourceURL: URL?
     @Published private(set) var sourceSize: CGSize?
     @Published private(set) var originalPreview: NSImage?
@@ -14,6 +14,9 @@ final class ImageProcessor: ObservableObject {
     @Published private(set) var processedImage: NSImage?
     @Published private(set) var errorMessage: String?
     @Published private(set) var currentStep: ImageProcessStep = .selection
+
+    /// 量化预览的派发代次：连续触发（旋转/重置）时仅应用最新一次结果。
+    private var previewGeneration = 0
 
     private var sourceImage: CGImage?
 
@@ -75,20 +78,46 @@ final class ImageProcessor: ObservableObject {
                 height: finalImage.height
             ))
 
-            let quantized = try quantize(finalImage, ditheringEnabled: false)
-            quantizedPreview = NSImage(cgImage: quantized, size: NSSize(
-                width: quantized.width,
-                height: quantized.height
-            ))
-            let floydSteinberg = try quantize(finalImage, ditheringEnabled: true)
-            floydSteinbergPreview = NSImage(cgImage: floydSteinberg, size: NSSize(
-                width: floydSteinberg.width,
-                height: floydSteinberg.height
-            ))
-            errorMessage = nil
+            // 量化是逐像素重计算，放到后台线程避免阻塞主线程。
+            let dithering = configuration.ditheringEnabled
+            previewGeneration += 1
+            let generation = previewGeneration
+            Task.detached(priority: .userInitiated) { [weak self] in
+                async let quantized = Self.computeQuantized(finalImage, dithering: false)
+                async let floydSteinberg = Self.computeQuantized(finalImage, dithering: dithering)
+                do {
+                    let images = try await (quantized, floydSteinberg)
+                    await self?.applyQuantizedPreviews(images.0, floydSteinberg: images.1, generation: generation)
+                } catch {
+                    await self?.applyQuantizedError(error, generation: generation)
+                }
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// 量化结果派发代次校验：仅应用最新请求，防止旧结果覆盖新配置。
+    private func applyQuantizedPreviews(
+        _ quantized: CGImage,
+        floydSteinberg: CGImage,
+        generation: Int
+    ) {
+        guard previewGeneration == generation, currentStep == .quantization else { return }
+        quantizedPreview = NSImage(cgImage: quantized, size: NSSize(
+            width: quantized.width,
+            height: quantized.height
+        ))
+        floydSteinbergPreview = NSImage(cgImage: floydSteinberg, size: NSSize(
+            width: floydSteinberg.width,
+            height: floydSteinberg.height
+        ))
+        errorMessage = nil
+    }
+
+    private func applyQuantizedError(_ error: Error, generation: Int) {
+        guard previewGeneration == generation else { return }
+        errorMessage = error.localizedDescription
     }
 
     func rotateRight() {
@@ -121,7 +150,7 @@ final class ImageProcessor: ObservableObject {
     }
 
     func resetEdits() {
-        configuration = .todocCard528x792
+        configuration = .todooCard528x792
         quantizedPreview = nil
         floydSteinbergPreview = nil
         processedImage = nil
@@ -131,7 +160,7 @@ final class ImageProcessor: ObservableObject {
     }
 
     func cancelCrop() {
-        configuration = .todocCard528x792
+        configuration = .todooCard528x792
         quantizedPreview = nil
         floydSteinbergPreview = nil
         processedImage = nil
@@ -148,10 +177,18 @@ final class ImageProcessor: ObservableObject {
         try pngData.write(to: url)
     }
 
-    func makeControllerPayload(for image: NSImage) throws -> Data {
+    func makeControllerPayload(for image: NSImage) async throws -> Data {
+        // NSImage→CGImage 转换留在主线程，逐像素编码放后台执行。
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             throw ImageProcessorError.renderFailed
         }
+        return try await Task.detached(priority: .userInitiated) {
+            try Self.encodeControllerPayload(cgImage: cgImage)
+        }.value
+    }
+
+    /// 将 528×792 六色位图编码为控制器 payload（纯像素计算，可在任意线程执行）。
+    nonisolated static func encodeControllerPayload(cgImage: CGImage) throws -> Data {
         guard cgImage.width == 528, cgImage.height == 792 else {
             throw ImageProcessorError.invalidTargetSize
         }
@@ -240,16 +277,6 @@ final class ImageProcessor: ObservableObject {
             let destinationIndex = (height - 1 - sourceY) * width + (width - 1 - sourceX)
             setCode(code(at: sourceIndex), at: destinationIndex)
         }
-
-        var rotated180 = calibrated
-        calibrated = [UInt8](repeating: 0, count: panelBitmap.count)
-        for sourceIndex in 0..<(width * height) {
-            let sourceX = sourceIndex % width
-            let sourceY = sourceIndex / width
-            let destinationIndex = (height - 1 - sourceY) * width + (width - 1 - sourceX)
-            setCode(code(at: sourceIndex), at: destinationIndex)
-        }
-        _ = rotated180
 
         var controller = [UInt8](repeating: 0, count: panelBitmap.count)
         let destinationWidth = height
@@ -412,7 +439,8 @@ final class ImageProcessor: ObservableObject {
         return result
     }
 
-    private func quantize(_ image: CGImage, ditheringEnabled: Bool? = nil) throws -> CGImage {
+    /// 六色量化（可选 Floyd–Steinberg 抖动）。纯像素计算，可在任意线程执行。
+    nonisolated private static func computeQuantized(_ image: CGImage, dithering: Bool) throws -> CGImage {
         let width = image.width
         let height = image.height
 
@@ -480,7 +508,7 @@ final class ImageProcessor: ObservableObject {
                 output[offset + 2] = selected.2
                 output[offset + 3] = 255
 
-                if ditheringEnabled ?? configuration.ditheringEnabled {
+                if dithering {
                     let errorRed = red - Float(selected.0)
                     let errorGreen = green - Float(selected.1)
                     let errorBlue = blue - Float(selected.2)
@@ -511,7 +539,7 @@ final class ImageProcessor: ObservableObject {
         return result
     }
 
-    private func addError(
+    nonisolated private static func addError(
         _ working: inout [Float],
         width: Int,
         height: Int,

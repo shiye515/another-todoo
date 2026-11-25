@@ -19,6 +19,5 @@ struct DetailPlaceholderView: View {
             }
         }
         .navigationTitle(selection.title)
-        .id(selection)
     }
 }

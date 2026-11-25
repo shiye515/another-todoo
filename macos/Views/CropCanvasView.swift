@@ -30,13 +30,15 @@ struct CropCanvasView: NSViewRepresentable {
 
 final class CropCanvasNSView: NSView {
     var image: NSImage?
-    var configuration = ImageEditConfiguration.todocCard528x792
+    var configuration = ImageEditConfiguration.todooCard528x792
     var isInteracting = false
     var onConfigurationChange: ((ImageEditConfiguration) -> Void)?
     var onInteractionChange: ((Bool) -> Void)?
 
     private var dragStartLocation: NSPoint?
     private var dragStartConfiguration: ImageEditConfiguration?
+    /// 滚轮缩放结束后延迟复位取景框状态；新滚动会取消上一次未触发的复位。
+    private var scrollResetWorkItem: DispatchWorkItem?
 
     override var isFlipped: Bool { false }
 
@@ -235,12 +237,14 @@ final class CropCanvasNSView: NSView {
         onConfigurationChange?(updated)
         needsDisplay = true
 
+        scrollResetWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.isInteracting = false
             self.onInteractionChange?(false)
             self.needsDisplay = true
         }
+        scrollResetWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(180), execute: workItem)
     }
 }
