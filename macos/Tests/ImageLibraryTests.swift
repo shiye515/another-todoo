@@ -57,12 +57,14 @@ final class ImageLibraryTests: XCTestCase {
         XCTAssertEqual(library.entries.count, 2)
         XCTAssertEqual(library.entries.map(\.displayName), ["A", "B"])
 
-        // 每个条目目录包含成品 + 两个量化图
+        // 每个条目目录包含成品 + 全部已实现变体量化图
         for entry in [first, second] {
-            for kind in ImageLibrary.ImageKind.allCases {
+            let fileNames = [ImageLibrary.ImageFile.processed.fileName]
+                + QuantizedVariant.implemented.map(\.fileName)
+            for fileName in fileNames {
                 XCTAssertTrue(
-                    FileManager.default.fileExists(atPath: entryDirectory(entry).appendingPathComponent(kind.fileName).path),
-                    "缺少 \(kind.fileName)"
+                    FileManager.default.fileExists(atPath: entryDirectory(entry).appendingPathComponent(fileName).path),
+                    "缺少 \(fileName)"
                 )
             }
         }
@@ -123,16 +125,16 @@ final class ImageLibraryTests: XCTestCase {
         // 删除两个量化图
         try FileManager.default.removeItem(at: entryDirectory(entry).appendingPathComponent("quantized.png"))
         try FileManager.default.removeItem(at: entryDirectory(entry).appendingPathComponent("dithered.png"))
-        XCTAssertTrue(library.quantizedFilesMissing(entry))
+        XCTAssertTrue(library.variantFilesMissing(entry))
 
         // 自愈补建
         let reloaded = makeLibrary()
         reloaded.loadFromDisk()
-        await reloaded.regenerateMissingQuantizedImages()
+        await reloaded.regenerateMissingVariantImages()
 
         XCTAssertTrue(FileManager.default.fileExists(atPath: entryDirectory(entry).appendingPathComponent("quantized.png").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: entryDirectory(entry).appendingPathComponent("dithered.png").path))
-        XCTAssertFalse(reloaded.quantizedFilesMissing(reloaded.entries[0]))
+        XCTAssertFalse(reloaded.variantFilesMissing(reloaded.entries[0]))
     }
 
     func testRequantizeOverwritesPersistedCopies() async throws {
@@ -141,10 +143,139 @@ final class ImageLibraryTests: XCTestCase {
         let quantizedURL = entryDirectory(entry).appendingPathComponent("quantized.png")
 
         let before = try Data(contentsOf: quantizedURL)
-        try await library.requantize(entry)
+        try await library.requantizeAll(entry)
         let after = try Data(contentsOf: quantizedURL)
 
         XCTAssertEqual(before, after, "同输入重算应产生相同字节（确定性输出）")
-        XCTAssertFalse(library.requantizingIDs.contains(entry.id))
+        XCTAssertTrue(library.requantizingKeys.isEmpty)
+    }
+
+    func testRequantizeVariantOnlyOverwritesThatVariant() async throws {
+        let library = makeLibrary()
+        let entry = try await library.add(displayName: "A", processedCGImage: sampleCGImage(), configuration: .todooCard528x792)
+        let quantizedURL = entryDirectory(entry).appendingPathComponent("quantized.png")
+        let ditheredURL = entryDirectory(entry).appendingPathComponent("dithered.png")
+        let junk = Data("junk".utf8)
+        try junk.write(to: quantizedURL)
+        try junk.write(to: ditheredURL)
+
+        let plain = try XCTUnwrap(QuantizedVariant.implementedVariant(withID: "plain"))
+        try await library.requantize(entry, variant: plain)
+
+        XCTAssertNotEqual(try Data(contentsOf: quantizedURL), junk, "目标变体应被重算覆盖")
+        XCTAssertEqual(try Data(contentsOf: ditheredURL), junk, "其余变体不应被改动")
+        XCTAssertTrue(library.requantizingKeys.isEmpty)
+    }
+
+    func testRequantizeAllOverwritesAllVariants() async throws {
+        let library = makeLibrary()
+        let entry = try await library.add(displayName: "A", processedCGImage: sampleCGImage(), configuration: .todooCard528x792)
+        let junk = Data("junk".utf8)
+        for variant in QuantizedVariant.implemented {
+            try junk.write(to: entryDirectory(entry).appendingPathComponent(variant.fileName))
+        }
+
+        try await library.requantizeAll(entry)
+
+        for variant in QuantizedVariant.implemented {
+            XCTAssertNotEqual(
+                try Data(contentsOf: entryDirectory(entry).appendingPathComponent(variant.fileName)),
+                junk,
+                "\(variant.name) 应被重算覆盖"
+            )
+        }
+    }
+
+    func testMissingSingleVariantFileRegenerated() async throws {
+        let library = makeLibrary()
+        let entry = try await library.add(displayName: "A", processedCGImage: sampleCGImage(), configuration: .todooCard528x792)
+        let quantizedURL = entryDirectory(entry).appendingPathComponent("quantized.png")
+        let before = try Data(contentsOf: quantizedURL)
+        try FileManager.default.removeItem(at: entryDirectory(entry).appendingPathComponent("dithered.png"))
+        XCTAssertTrue(library.variantFilesMissing(entry))
+
+        let reloaded = makeLibrary()
+        reloaded.loadFromDisk()
+        await reloaded.regenerateMissingVariantImages()
+
+        XCTAssertFalse(reloaded.variantFilesMissing(reloaded.entries[0]))
+        XCTAssertEqual(try Data(contentsOf: quantizedURL), before, "未缺失的变体不应被重算")
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: entryDirectory(entry).appendingPathComponent("dithered.png").path),
+            "缺失的变体应被补建"
+        )
+    }
+
+    // MARK: - 变体选中持久化
+
+    private var manifestURL: URL { directory.appendingPathComponent("manifest.json") }
+
+    private func writeManifestJSON(_ json: String) throws {
+        try Data(json.utf8).write(to: manifestURL)
+    }
+
+    func testLegacyManifestWithoutSelectionDecodesUnselected() async throws {
+        let library = makeLibrary()
+        let entry = try await library.add(displayName: "A", processedCGImage: sampleCGImage(), configuration: .todooCard528x792)
+
+        // 重写为旧格式 manifest（无 selectedVariantID 字段）
+        try writeManifestJSON("""
+        [{"id":"\(entry.id.uuidString)","displayName":"A","addedAt":"2026-11-25T10:00:00Z","configuration":{"targetWidth":528,"targetHeight":792,"rotationDegrees":0,"cropMode":"按目标比例","zoom":1,"horizontalOffset":0.5,"verticalOffset":0.5,"ditheringEnabled":true}}]
+        """)
+
+        let reloaded = makeLibrary()
+        reloaded.loadFromDisk()
+
+        XCTAssertEqual(reloaded.entries.count, 1, "旧格式 manifest 应正常解码")
+        XCTAssertEqual(reloaded.entries.first?.displayName, "A")
+        XCTAssertNil(reloaded.entries.first?.selectedVariantID, "缺省字段应视为未选中")
+    }
+
+    func testUnknownOrPlannedVariantSelectionClearedOnLoad() async throws {
+        let library = makeLibrary()
+        let entry = try await library.add(displayName: "A", processedCGImage: sampleCGImage(), configuration: .todooCard528x792)
+        let base = """
+        [{"id":"\(entry.id.uuidString)","displayName":"A","addedAt":"2026-11-25T10:00:00Z","selectedVariantID":"%@","configuration":{"targetWidth":528,"targetHeight":792,"rotationDegrees":0,"cropMode":"按目标比例","zoom":1,"horizontalOffset":0.5,"verticalOffset":0.5,"ditheringEnabled":true}}]
+        """
+
+        for invalidID in ["future-algo", "nope"] {
+            try writeManifestJSON(base.replacingOccurrences(of: "%@", with: invalidID))
+            let reloaded = makeLibrary()
+            reloaded.loadFromDisk()
+            XCTAssertEqual(reloaded.entries.count, 1)
+            XCTAssertNil(reloaded.entries.first?.selectedVariantID, "\(invalidID) 不可选中，应视为未选中")
+        }
+    }
+
+    func testVariantSelectionPersistsAcrossReload() async throws {
+        let library = makeLibrary()
+        let entry = try await library.add(displayName: "A", processedCGImage: sampleCGImage(), configuration: .todooCard528x792)
+        let floyd = try XCTUnwrap(QuantizedVariant.implementedVariant(withID: "floyd"))
+        // 规划中变体（自造样例）不可选中
+        let planned = QuantizedVariant(
+            id: "future-algo",
+            name: "Future",
+            subtitle: "",
+            summary: "",
+            isPlanned: true,
+            fileName: "future.png",
+            algorithm: .atkinson
+        )
+
+        library.selectVariant(planned, for: entry)
+        XCTAssertNil(library.entries.first?.selectedVariantID)
+
+        library.selectVariant(floyd, for: entry)
+        XCTAssertEqual(library.entries.first?.selectedVariantID, "floyd")
+
+        let reloaded = makeLibrary()
+        reloaded.loadFromDisk()
+        XCTAssertEqual(reloaded.entries.first?.selectedVariantID, "floyd", "重启后应恢复选中状态")
+
+        // 清除选中同样持久化
+        reloaded.selectVariant(nil, for: try XCTUnwrap(reloaded.entries.first))
+        let again = makeLibrary()
+        again.loadFromDisk()
+        XCTAssertNil(again.entries.first?.selectedVariantID)
     }
 }

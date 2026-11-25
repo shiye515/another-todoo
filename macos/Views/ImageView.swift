@@ -8,14 +8,15 @@ private struct PendingTransfer: Identifiable {
     let deviceID: UUID
 }
 
-/// 图片页：图片库列表（纯列表布局，无处理区）。
-/// 每个条目旁提供量化图发送、抖动图发送、重新量化与删除操作。
+/// 图片页：左侧库列表（资产管理）+ 右侧详情区（成品图与量化变体预览）。
+/// 发送模型为「点击变体卡片选中 + 底部统一发送」，选中状态随条目持久化。
 struct ImageView: View {
     @ObservedObject var processor: ImageProcessor
     @ObservedObject var library: ImageLibrary
     @ObservedObject var transferService: TodooCardTransferService
     @AppStorage("defaultTodooCardDeviceID") private var defaultDeviceID = ""
 
+    @State private var selectedEntryID: UUID?
     @State private var pendingTransfer: PendingTransfer?
     /// payload 后台编码中的条目（按钮转圈）。
     @State private var encodingEntryID: UUID?
@@ -26,6 +27,14 @@ struct ImageView: View {
         pendingTransfer != nil || transferService.isTransferActive || encodingEntryID != nil
     }
 
+    /// 当前详情区展示的条目（默认第一个）。
+    private var selectedEntry: LibraryImage? {
+        if let id = selectedEntryID, let entry = library.entries.first(where: { $0.id == id }) {
+            return entry
+        }
+        return library.entries.first
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             errorBanner
@@ -34,9 +43,26 @@ struct ImageView: View {
             if library.entries.isEmpty {
                 emptyState
             } else {
-                entryList
-                    .padding(.horizontal, 24)
-                    .padding(.top, 12)
+                HStack(spacing: 0) {
+                    LibraryListColumn(
+                        library: library,
+                        selectedEntryID: selectedEntry?.id,
+                        select: { selectedEntryID = $0.id },
+                        remove: { remove($0) }
+                    )
+                    .frame(width: 218)
+                    Divider()
+                    if let entry = selectedEntry {
+                        ImageDetailView(
+                            entry: entry,
+                            library: library,
+                            operationsDisabled: sendDisabled,
+                            isEncoding: encodingEntryID == entry.id,
+                            selectVariant: { library.selectVariant($0, for: entry) },
+                            send: { send(entry, variant: $0) }
+                        )
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -99,26 +125,6 @@ struct ImageView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var entryList: some View {
-        List {
-            ForEach(library.entries) { entry in
-                EntryRow(
-                    entry: entry,
-                    thumbnail: library.image(for: entry, kind: .processed),
-                    isTransferring: transferService.isTransferActive,
-                    isEncoding: encodingEntryID == entry.id,
-                    isRequantizing: library.requantizingIDs.contains(entry.id),
-                    canOperate: !sendDisabled,
-                    send: { send(entry, kind: $0) },
-                    requantize: { Task { try? await library.requantize(entry) } },
-                    remove: { library.remove(entry) }
-                )
-                .padding(.vertical, 4)
-            }
-        }
-        .listStyle(.inset)
-    }
-
     // MARK: - 操作
 
     private func beginAdd() {
@@ -133,7 +139,14 @@ struct ImageView: View {
         processor.beginAdd(urls: panel.urls)
     }
 
-    private func send(_ entry: LibraryImage, kind: ImageLibrary.ImageKind) {
+    private func remove(_ entry: LibraryImage) {
+        library.remove(entry)
+        if selectedEntryID == entry.id {
+            selectedEntryID = nil
+        }
+    }
+
+    private func send(_ entry: LibraryImage, variant: QuantizedVariant) {
         guard !sendDisabled, encodingEntryID == nil else { return }
         guard let deviceID = UUID(uuidString: defaultDeviceID) else {
             processor.setErrorMessage("默认设备 ID 无效，请到“设备”页重新设置默认设备。")
@@ -143,7 +156,7 @@ struct ImageView: View {
         Task {
             defer { encodingEntryID = nil }
             do {
-                guard let image = library.image(for: entry, kind: kind) else {
+                guard let image = library.image(for: entry, file: .variant(variant)) else {
                     processor.setErrorMessage("量化图缺失且自动补建失败，请尝试“重新量化”。")
                     return
                 }
@@ -156,70 +169,124 @@ struct ImageView: View {
     }
 }
 
-/// 图片库列表行：缩略图 + 名称/日期 + 发送/重新量化/删除按钮组。
-private struct EntryRow: View {
-    let entry: LibraryImage
-    let thumbnail: NSImage?
-    let isTransferring: Bool
-    let isEncoding: Bool
-    let isRequantizing: Bool
-    let canOperate: Bool
-    let send: (ImageLibrary.ImageKind) -> Void
-    let requantize: () -> Void
-    let remove: () -> Void
+/// 左侧库列表：条目缩略图、名称、日期、已选变体徽标与删除入口。
+private struct LibraryListColumn: View {
+    @ObservedObject var library: ImageLibrary
+    let selectedEntryID: UUID?
+    let select: (LibraryImage) -> Void
+    let remove: (LibraryImage) -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
+        ScrollView {
+            LazyVStack(spacing: 2) {
+                ForEach(library.entries) { entry in
+                    LibraryItemRow(
+                        entry: entry,
+                        thumbnail: thumbnail(for: entry),
+                        selectedVariant: entry.selectedVariantID.flatMap(QuantizedVariant.implementedVariant(withID:)),
+                        isSelected: entry.id == selectedEntryID,
+                        remove: { remove(entry) }
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture { select(entry) }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel(Text(entry.displayName))
+                    .accessibilityValue(Text(
+                        entry.selectedVariantID.flatMap(QuantizedVariant.implementedVariant(withID:))
+                            .map { "已选 \($0.name)" } ?? "未选中"
+                    ))
+                    .accessibilityAction(.default) { select(entry) }
+                    .accessibilityAction(named: Text("删除条目")) { remove(entry) }
+                }
+            }
+            .padding(8)
+        }
+        .background(Color(nsColor: .underPageBackgroundColor))
+    }
+
+    /// 缩略图：条目已选变体的量化图（未选中时用标准量化）。
+    private func thumbnail(for entry: LibraryImage) -> NSImage? {
+        let variant = entry.selectedVariantID.flatMap(QuantizedVariant.implementedVariant(withID:))
+            ?? QuantizedVariant.implementedVariant(withID: "plain")
+        guard let variant else { return nil }
+        return library.image(for: entry, file: .variant(variant))
+    }
+}
+
+/// 库列表条目：2:3 量化缩略图 + 名称/日期/已选徽标，悬停或右键可删除。
+private struct LibraryItemRow: View {
+    let entry: LibraryImage
+    let thumbnail: NSImage?
+    let selectedVariant: QuantizedVariant?
+    let isSelected: Bool
+    let remove: () -> Void
+
+    @State private var isHovering = false
+
+    /// 列表日期格式：MM/DD HH:mm。
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "MM/dd HH:mm"
+        return formatter
+    }()
+
+    var body: some View {
+        HStack(spacing: 10) {
             thumbnailView
-                .frame(width: 44, height: 44)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(nsColor: .controlBackgroundColor))
+                .frame(width: 44, height: 66)
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                 )
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.displayName)
-                    .fontWeight(.medium)
+                    .font(.system(size: 12.5, weight: .semibold))
                     .lineLimit(1)
-                Text(entry.addedAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
+                    .truncationMode(.middle)
+                Text(Self.dateFormatter.string(from: entry.addedAt))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            HStack(spacing: 10) {
-                Button("量化图发送") {
-                    send(.quantized)
-                }
-                Button("抖动图发送") {
-                    send(.dithered)
-                }
-                if isRequantizing {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(width: 66)
-                } else {
-                    Button {
-                        requantize()
-                    } label: {
-                        Label("重新量化", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .disabled(isTransferring)
+                if let selectedVariant {
+                    Text("已选 \(selectedVariant.name)")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(Color.accentColor.opacity(0.12)))
                 }
             }
-            .controlSize(.small)
-            .disabled(isEncoding || !canOperate)
 
-            Button {
+            Spacer(minLength: 0)
+
+            if isHovering {
+                Button(action: remove) {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.red)
+                .help("从图片库删除该条目")
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 9)
+                .fill(isSelected ? Color.accentColor.opacity(0.12) : (isHovering ? Color.primary.opacity(0.05) : .clear))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(isSelected ? Color.accentColor.opacity(0.35) : .clear, lineWidth: 1)
+        )
+        .onHover { isHovering = $0 }
+        .contextMenu {
+            Button(role: .destructive) {
                 remove()
             } label: {
-                Image(systemName: "trash")
+                Label("删除条目", systemImage: "trash")
             }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.red)
-            .help("从图片库删除该条目")
         }
     }
 

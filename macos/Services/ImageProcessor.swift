@@ -419,8 +419,8 @@ final class ImageProcessor: ObservableObject {
         return result
     }
 
-    /// 六色量化（可选 Floyd–Steinberg 抖动）。纯像素计算，可在任意线程执行。
-    nonisolated static func computeQuantized(_ image: CGImage, dithering: Bool) throws -> CGImage {
+    /// 六色量化（可选误差扩散抖动）。纯像素计算，可在任意线程执行。
+    nonisolated static func computeQuantized(_ image: CGImage, algorithm: QuantizationAlgorithm) throws -> CGImage {
         let width = image.width
         let height = image.height
 
@@ -463,7 +463,10 @@ final class ImageProcessor: ObservableObject {
 
         var output = [UInt8](repeating: 255, count: width * height * 4)
         for y in 0..<height {
-            for x in 0..<width {
+            // Ostromoukhov 采用蛇形扫描（论文推荐），其余算法逐行扫描。
+            let serpentine = algorithm == .ostromoukhov && y % 2 == 1
+            for step in 0..<width {
+                let x = serpentine ? width - 1 - step : step
                 let index = y * width + x
                 let offset = index * 4
                 let red = working[offset]
@@ -488,14 +491,21 @@ final class ImageProcessor: ObservableObject {
                 output[offset + 2] = selected.2
                 output[offset + 3] = 255
 
-                if dithering {
+                if algorithm != .none {
                     let errorRed = red - Float(selected.0)
                     let errorGreen = green - Float(selected.1)
                     let errorBlue = blue - Float(selected.2)
-                    addError(&working, width: width, height: height, x: x + 1, y: y, red: errorRed, green: errorGreen, blue: errorBlue, weight: 7.0 / 16.0)
-                    addError(&working, width: width, height: height, x: x - 1, y: y + 1, red: errorRed, green: errorGreen, blue: errorBlue, weight: 3.0 / 16.0)
-                    addError(&working, width: width, height: height, x: x, y: y + 1, red: errorRed, green: errorGreen, blue: errorBlue, weight: 5.0 / 16.0)
-                    addError(&working, width: width, height: height, x: x + 1, y: y + 1, red: errorRed, green: errorGreen, blue: errorBlue, weight: 1.0 / 16.0)
+                    diffuseError(
+                        algorithm,
+                        &working,
+                        width: width,
+                        height: height,
+                        x: x,
+                        y: y,
+                        red: errorRed,
+                        green: errorGreen,
+                        blue: errorBlue
+                    )
                 }
             }
         }
@@ -517,6 +527,53 @@ final class ImageProcessor: ObservableObject {
             throw ImageProcessorError.renderFailed
         }
         return result
+    }
+
+    /// 按算法将量化误差扩散到未处理邻居。
+    nonisolated private static func diffuseError(
+        _ algorithm: QuantizationAlgorithm,
+        _ working: inout [Float],
+        width: Int,
+        height: Int,
+        x: Int,
+        y: Int,
+        red: Float,
+        green: Float,
+        blue: Float
+    ) {
+        switch algorithm {
+        case .none:
+            break
+        case .floydSteinberg:
+            // 7/16 右，3/16 左下，5/16 下，1/16 右下。
+            addError(&working, width: width, height: height, x: x + 1, y: y, red: red, green: green, blue: blue, weight: 7.0 / 16.0)
+            addError(&working, width: width, height: height, x: x - 1, y: y + 1, red: red, green: green, blue: blue, weight: 3.0 / 16.0)
+            addError(&working, width: width, height: height, x: x, y: y + 1, red: red, green: green, blue: blue, weight: 5.0 / 16.0)
+            addError(&working, width: width, height: height, x: x + 1, y: y + 1, red: red, green: green, blue: blue, weight: 1.0 / 16.0)
+        case .atkinson:
+            // 六个邻居各 1/8，只传播 3/4 误差（丢弃 1/4，对比度更高）。
+            let weight: Float = 1.0 / 8.0
+            addError(&working, width: width, height: height, x: x + 1, y: y, red: red, green: green, blue: blue, weight: weight)
+            addError(&working, width: width, height: height, x: x + 2, y: y, red: red, green: green, blue: blue, weight: weight)
+            addError(&working, width: width, height: height, x: x - 1, y: y + 1, red: red, green: green, blue: blue, weight: weight)
+            addError(&working, width: width, height: height, x: x, y: y + 1, red: red, green: green, blue: blue, weight: weight)
+            addError(&working, width: width, height: height, x: x + 1, y: y + 1, red: red, green: green, blue: blue, weight: weight)
+            addError(&working, width: width, height: height, x: x, y: y + 2, red: red, green: green, blue: blue, weight: weight)
+        case .ostromoukhov:
+            // 可变系数误差扩散：按当前亮度查表，蛇形扫描方向决定前向。
+            let luma = 0.299 * red + 0.587 * green + 0.114 * blue
+            let index = Int((min(max(luma, 0), 255) / 255.0 * 255.0).rounded())
+            let (d1, d2, d3, sum) = QuantizationAlgorithm.ostromoukhovCoefficients[index]
+            let total = Float(sum)
+            let forward = Float(d1) / total
+            let downBack = Float(d2) / total
+            let down = Float(d3) / total
+            let yIsReversedRow = y % 2 == 1 && height > 0 // 与扫描行方向一致
+            let direction = (algorithm == .ostromoukhov && yIsReversedRow) ? -1 : 1
+            addError(&working, width: width, height: height, x: x + direction, y: y, red: red, green: green, blue: blue, weight: forward)
+            addError(&working, width: width, height: height, x: x - direction, y: y + 1, red: red, green: green, blue: blue, weight: downBack)
+            addError(&working, width: width, height: height, x: x, y: y + 1, red: red, green: green, blue: blue, weight: down)
+        }
     }
 
     nonisolated private static func addError(
