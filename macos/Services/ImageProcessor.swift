@@ -271,10 +271,12 @@ final class ImageProcessor: ObservableObject {
             }
         }
 
+        // 方向校准：与参考工具链 `todooCardCorrect` 一致（rotated180 + flippedHorizontally，
+        // 合成等价于垂直翻转）。此前仅做 180° 旋转（缺少水平翻转），导致设备画面左右镜像。
         for sourceIndex in 0..<(width * height) {
             let sourceX = sourceIndex % width
             let sourceY = sourceIndex / width
-            let destinationIndex = (height - 1 - sourceY) * width + (width - 1 - sourceX)
+            let destinationIndex = (height - 1 - sourceY) * width + sourceX
             setCode(code(at: sourceIndex), at: destinationIndex)
         }
 
