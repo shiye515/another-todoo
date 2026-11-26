@@ -44,20 +44,57 @@ open "$(ls -td ~/Library/Developer/Xcode/DerivedData/TodooCardMacApp-*/Build/Pro
 
 > 应用数据在 `~/Library/Application Support/TodooCardMacApp/ImageLibrary/`：`manifest.json` 存条目元数据，每个条目一个 UUID 目录（`processed.png` 成品 + 各变体量化图）。
 
+## iOS 版（ios/）
+
+iOS 应用与 macOS **共享同一套 Models/Services 源码**（图片库、量化算法、蓝牙传输），UI 为 iOS SwiftUI 实现，能力与 macOS 版一致（添加/裁剪入库、四变体量化预览、选中发送、重新量化、设备管理）。
+
+```bash
+# 重新生成工程（增删源文件后）
+cd ios && xcodegen generate && cd ..
+
+# 构建（模拟器）
+xcodebuild -project ios/TodooCardIOS.xcodeproj -scheme TodooCardIOS \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+
+# 测试（单元测试复用 macos/Tests + UI 端到端测试）
+xcodebuild -project ios/TodooCardIOS.xcodeproj -scheme TodooCardIOS \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
+```
+
+> 蓝牙传输需在真机上验证（模拟器无 BLE 硬件）；UI 测试通过 `-UITestSeedAddImage` / `-UITestResetLibrary` 启动参数预置数据（仅 DEBUG 构建生效）。
+
 ## 项目结构
+
+```
+macos/                      # macOS 应用（App/Models/Services/Views/Tests + XcodeGen）
+ios/                        # iOS 应用（App/Views/UITests + XcodeGen），与 macOS 共享 Models/Services
+openspec/                   # 规格驱动开发：spec 主库 + change 提案/归档
+docs/                       # 技术文档、设计稿、提示词指南（见下方文档索引）
+```
+
+### macOS
 
 ```
 macos/
 ├── App/                    # 入口（窗口、默认尺寸）
-├── Models/                 # LibraryImage、QuantizedVariant（变体注册表）、配置
+├── Models/                 # LibraryImage、QuantizedVariant（变体注册表）、配置（两平台共享）
 ├── Services/               # ImageLibrary（持久化）、ImageProcessor（裁剪/量化）、
-│                           # QuantizationAlgorithm（抖动算法）、蓝牙传输、设备扫描
+│                           # QuantizationAlgorithm（抖动算法）、蓝牙传输、设备扫描（两平台共享）
 ├── Views/                  # 图片页（库列表 + 量化预览详情）、设备页、裁剪、传输进度
 ├── Tests/                  # 单元测试（量化算法、图片库、payload 编码、滚轮换算等）
 ├── Support/                # Info.plist、应用图标（Assets.xcassets）
 └── project.yml             # XcodeGen 工程定义
-openspec/                   # 规格驱动开发：spec 主库 + change 提案/归档
-docs/                       # 技术文档、设计稿、提示词指南（见下方文档索引）
+```
+
+### iOS
+
+```
+ios/
+├── App/                    # 入口（TabView：图片/设备）+ UI 测试接缝（仅 DEBUG）
+├── Views/                  # 图片库/详情/裁剪/传输进度/设备页（iOS SwiftUI）
+├── UITests/                # UI 测试（添加→裁剪→选中→发送入口→删除 端到端）
+├── Assets.xcassets/        # 应用图标
+└── project.yml             # XcodeGen 工程定义（直接编译 ../macos/Models 与 ../macos/Services）
 ```
 
 ## 如何新增量化算法

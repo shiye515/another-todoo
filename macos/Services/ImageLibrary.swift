@@ -1,5 +1,6 @@
-import AppKit
+import CoreGraphics
 import Foundation
+import ImageIO
 import os
 
 /// 图片库：条目元数据与处理成果（裁剪成品 + 各量化变体图）的持久化与内存缓存。
@@ -35,9 +36,10 @@ final class ImageLibrary: NSObject, ObservableObject {
     @Published private(set) var lastError: String?
 
     private let logger = Logger(subsystem: "com.todoo.TodooCardMacApp", category: "library")
-    private let directory: URL
+    /// 图片库根目录（内部可见，供 UI 测试接缝重置数据）。
+    let directory: URL
     private let manifestURL: URL
-    private var imageCache: [Key: NSImage] = [:]
+    private var imageCache: [Key: PlatformImage] = [:]
     private var loadCompleted = false
 
     private struct Key: Hashable {
@@ -140,18 +142,12 @@ final class ImageLibrary: NSObject, ObservableObject {
         for variant in QuantizedVariant.implemented {
             let quantized = try ImageProcessor.computeQuantized(processedCGImage, algorithm: variant.algorithm)
             try writePNG(quantized, to: entryDirectory.appendingPathComponent(variant.fileName))
-            imageCache[Key(id: entry.id, file: .variant(variant))] = NSImage(
-                cgImage: quantized,
-                size: NSSize(width: quantized.width, height: quantized.height)
-            )
+            imageCache[Key(id: entry.id, file: .variant(variant))] = PlatformImageIO.image(from: quantized)
         }
 
         entries.append(entry)
         saveManifest()
-        imageCache[Key(id: entry.id, file: .processed)] = NSImage(
-            cgImage: processedCGImage,
-            size: NSSize(width: processedCGImage.width, height: processedCGImage.height)
-        )
+        imageCache[Key(id: entry.id, file: .processed)] = PlatformImageIO.image(from: processedCGImage)
         logger.info("入库：\(displayName, privacy: .public)（成品 + 量化图）")
         return entry
     }
@@ -190,10 +186,7 @@ final class ImageLibrary: NSObject, ObservableObject {
             let processed = try processedCGImage(for: entry)
             let quantized = try ImageProcessor.computeQuantized(processed, algorithm: variant.algorithm)
             try writePNG(quantized, to: entryDirectory(for: entry).appendingPathComponent(variant.fileName))
-            imageCache[Key(id: entry.id, file: .variant(variant))] = NSImage(
-                cgImage: quantized,
-                size: NSSize(width: quantized.width, height: quantized.height)
-            )
+            imageCache[Key(id: entry.id, file: .variant(variant))] = PlatformImageIO.image(from: quantized)
             logger.info("重新量化完成：\(entry.displayName, privacy: .public) / \(variant.name, privacy: .public)")
         } catch {
             lastError = "重新量化失败：\(error.localizedDescription)"
@@ -212,10 +205,10 @@ final class ImageLibrary: NSObject, ObservableObject {
     // MARK: - 图片访问
 
     /// 条目图片（缓存优先，未命中时同步解码并缓存）。
-    func image(for entry: LibraryImage, file: ImageFile) -> NSImage? {
+    func image(for entry: LibraryImage, file: ImageFile) -> PlatformImage? {
         let key = Key(id: entry.id, file: file)
         if let cached = imageCache[key] { return cached }
-        guard let image = NSImage(contentsOf: fileURL(for: entry, file: file)) else { return nil }
+        guard let image = PlatformImageIO.image(contentsOf: fileURL(for: entry, file: file)) else { return nil }
         imageCache[key] = image
         return image
     }
@@ -244,19 +237,14 @@ final class ImageLibrary: NSObject, ObservableObject {
     }
 
     private func processedCGImage(for entry: LibraryImage) throws -> CGImage {
-        guard let image = NSImage(contentsOf: processedURL(for: entry)),
-              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+        guard let cgImage = PlatformImageIO.cgImage(contentsOf: processedURL(for: entry)) else {
             throw ImageProcessorError.renderFailed
         }
         return cgImage
     }
 
     private func writePNG(_ cgImage: CGImage, to url: URL) throws {
-        let rep = NSBitmapImageRep(cgImage: cgImage)
-        guard let data = rep.representation(using: .png, properties: [:]) else {
-            throw ImageProcessorError.renderFailed
-        }
-        try data.write(to: url, options: .atomic)
+        try PlatformImageIO.writePNG(cgImage, to: url)
     }
 
     private func saveManifest() {

@@ -1,4 +1,3 @@
-import AppKit
 import CoreGraphics
 import Foundation
 import ImageIO
@@ -13,7 +12,7 @@ final class ImageProcessor: ObservableObject {
     /// 裁剪画布的编辑配置（缩放/偏移/旋转），随裁剪确认一并入库。
     @Published var configuration = ImageEditConfiguration.todooCard528x792
     /// 裁剪画布显示的原图预览（仅添加队列期间驻留内存，不入库）。
-    @Published private(set) var originalPreview: NSImage?
+    @Published private(set) var originalPreview: PlatformImage?
     /// 裁剪窗口是否可见（添加队列中有待裁剪图片）。
     @Published private(set) var isCropping = false
     /// 当前批次的渲染/入库在后台进行中。
@@ -61,7 +60,7 @@ final class ImageProcessor: ObservableObject {
                 stagedSource = source
                 stagedDisplayName = url.deletingPathExtension().lastPathComponent
                 configuration = .todooCard528x792
-                originalPreview = NSImage(cgImage: source, size: .zero)
+                originalPreview = PlatformImageIO.image(from: source)
                 isCropping = true
                 return
             } catch {
@@ -97,7 +96,7 @@ final class ImageProcessor: ObservableObject {
     ) async {
         defer { isProcessingAdd = false }
         do {
-            let processed = try render(source, configuration: config)
+            let processed = try Self.render(source, configuration: config)
             _ = try await library.add(
                 displayName: name,
                 processedCGImage: processed,
@@ -141,14 +140,18 @@ final class ImageProcessor: ObservableObject {
     private func refreshStagedPreview() {
         guard let source = stagedSource else { return }
         do {
-            let rotated = try rotate(source, degrees: configuration.rotationDegrees)
-            originalPreview = NSImage(cgImage: rotated, size: NSSize(
-                width: rotated.width,
-                height: rotated.height
-            ))
+            let rotated = try Self.rotate(source, degrees: configuration.rotationDegrees)
+            originalPreview = PlatformImageIO.image(from: rotated)
         } catch {
             setErrorMessage(error.localizedDescription)
         }
+    }
+
+    /// 按当前配置渲染裁剪成品预览（仅添加队列期间可用）。
+    func renderedStagedPreview() -> PlatformImage? {
+        guard let source = stagedSource else { return nil }
+        guard let rendered = try? Self.render(source, configuration: configuration) else { return nil }
+        return PlatformImageIO.image(from: rendered)
     }
 
     private static func decodeImage(at url: URL) throws -> CGImage? {
@@ -159,9 +162,9 @@ final class ImageProcessor: ObservableObject {
         return image
     }
 
-    func makeControllerPayload(for image: NSImage) async throws -> Data {
-        // NSImage→CGImage 转换留在主线程，逐像素编码放后台执行。
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+    func makeControllerPayload(for image: PlatformImage) async throws -> Data {
+        // 平台位图→CGImage 转换留在主线程，逐像素编码放后台执行。
+        guard let cgImage = PlatformImageIO.cgImage(from: image) else {
             throw ImageProcessorError.renderFailed
         }
         return try await Task.detached(priority: .userInitiated) {
@@ -282,7 +285,8 @@ final class ImageProcessor: ObservableObject {
         return Data(controller)
     }
 
-    private func render(_ source: CGImage, configuration: ImageEditConfiguration) throws -> CGImage {
+    /// 按当前裁剪配置渲染成品效果（跨平台；iOS 裁剪画布的实时预览使用）。
+    nonisolated static func render(_ source: CGImage, configuration: ImageEditConfiguration) throws -> CGImage {
         guard configuration.targetWidth > 0, configuration.targetHeight > 0 else {
             throw ImageProcessorError.invalidTargetSize
         }
@@ -304,7 +308,7 @@ final class ImageProcessor: ObservableObject {
             throw ImageProcessorError.renderFailed
         }
 
-        context.setFillColor(NSColor.white.cgColor)
+        context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
         context.fill(CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
         context.interpolationQuality = .high
 
@@ -351,7 +355,7 @@ final class ImageProcessor: ObservableObject {
         return result
     }
 
-    private func rotate(_ image: CGImage, degrees: Int) throws -> CGImage {
+    nonisolated private static func rotate(_ image: CGImage, degrees: Int) throws -> CGImage {
         switch degrees % 360 {
         case 0:
             return image
@@ -366,7 +370,7 @@ final class ImageProcessor: ObservableObject {
         }
     }
 
-    private func rotateQuarter(_ image: CGImage, clockwise: Bool) throws -> CGImage {
+    nonisolated private static func rotateQuarter(_ image: CGImage, clockwise: Bool) throws -> CGImage {
         let sourceWidth = image.width
         let sourceHeight = image.height
         let targetWidth = sourceHeight
@@ -397,7 +401,7 @@ final class ImageProcessor: ObservableObject {
         return result
     }
 
-    private func rotateHalf(_ image: CGImage) throws -> CGImage {
+    nonisolated private static func rotateHalf(_ image: CGImage) throws -> CGImage {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
             data: nil,

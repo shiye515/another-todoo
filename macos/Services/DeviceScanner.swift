@@ -20,7 +20,7 @@ final class DeviceScanner: NSObject, ObservableObject {
             case .resetting:
                 return "蓝牙正在重置"
             case .unsupported:
-                return "此 Mac 不支持蓝牙"
+                return "此设备不支持蓝牙"
             case .unauthorized:
                 return "没有蓝牙权限，请在系统设置中授权"
             case .poweredOff:
