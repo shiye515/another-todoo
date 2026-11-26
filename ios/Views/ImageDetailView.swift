@@ -213,7 +213,10 @@ struct ImageDetailView: View {
 
 // MARK: - 卡片
 
-private let cardWidth: CGFloat = 236
+/// 卡片宽度：图片展示宽度为原 216pt 的 64%（≈138pt，卡片内边距不变）→ 整卡 236 → 158pt。
+private let cardWidth: CGFloat = 158
+/// 占位卡图片区高度随图片宽度等比缩放（原 324pt × 64%）。
+private let placeholderImageHeight: CGFloat = 207
 
 private func cardBackground() -> some View {
     RoundedRectangle(cornerRadius: 12)
@@ -328,7 +331,7 @@ private struct PlannedVariantCard: View {
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color(.tertiaryLabel))
             }
-            .frame(height: 324)
+            .frame(height: placeholderImageHeight)
             Text(variant.name)
                 .font(.system(size: 12.5, weight: .bold))
                 .padding(.top, 8)

@@ -76,7 +76,7 @@
 		C61E37AAE6ECE3637E4FC825 /* TodooCardIOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodooCardIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1CA98E374AC3920F32EF33F /* LibraryImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryImage.swift; sourceTree = "<group>"; };
 		D679002494B99CCC55D9E104 /* TodooCardIOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodooCardIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D8D2AC8B38AEC8F1CD18FE46 /* TodooCardIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodooCardIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8D2AC8B38AEC8F1CD18FE46 /* TodooCardIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TodooCardIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E41AAEE8CCAC636BA5A54700 /* TodooCardIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodooCardIOSApp.swift; sourceTree = "<group>"; };
 		E683369A652CD4E9587CEBFF /* UITestSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestSeed.swift; sourceTree = "<group>"; };
 		EB2E8C97DC8783F949F2EA10 /* ImageLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLibraryTests.swift; sourceTree = "<group>"; };
@@ -261,6 +261,10 @@
 				TargetAttributes = {
 					203446577B558F024F912503 = {
 						TestTargetID = EE546FD060E68A7B838C3933;
+					};
+					EE546FD060E68A7B838C3933 = {
+						DevelopmentTeam = 5Q85C9M9LA;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -499,6 +503,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 5Q85C9M9LA;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = TodooCard;
@@ -588,6 +593,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 5Q85C9M9LA;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = TodooCard;

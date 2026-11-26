@@ -11,6 +11,8 @@ struct ImageLibraryView: View {
 
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var isImportingFiles = false
+    @State private var isShowingAddOptions = false
+    @State private var isPickingPhotos = false
 
     var body: some View {
         NavigationStack {
@@ -38,25 +40,29 @@ struct ImageLibraryView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        PhotosPicker(
-                            selection: $photoItems,
-                            maxSelectionCount: 20,
-                            matching: .images
-                        ) {
-                            Label("从照片选择", systemImage: "photo")
-                        }
-                        Button {
-                            isImportingFiles = true
-                        } label: {
-                            Label("从文件导入", systemImage: "folder")
-                        }
+                    Button {
+                        isShowingAddOptions = true
                     } label: {
                         Label("添加图片", systemImage: "plus")
                     }
                     .disabled(processor.isCropping || processor.isProcessingAdd)
                 }
             }
+            .confirmationDialog("添加图片", isPresented: $isShowingAddOptions, titleVisibility: .visible) {
+                Button("从照片选择") {
+                    isPickingPhotos = true
+                }
+                Button("从文件导入") {
+                    isImportingFiles = true
+                }
+                Button("取消", role: .cancel) {}
+            }
+            .photosPicker(
+                isPresented: $isPickingPhotos,
+                selection: $photoItems,
+                maxSelectionCount: 20,
+                matching: .images
+            )
             .fileImporter(
                 isPresented: $isImportingFiles,
                 allowedContentTypes: [.image],
